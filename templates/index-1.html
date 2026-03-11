@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Network Vulnerability Scanner</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Courier New', monospace;
+      background: #0a0e1a;
+      color: #e0e6f0;
+      min-height: 100vh;
+    }
+
+    /* HEADER */
+    header {
+      background: linear-gradient(135deg, #0d1b2a, #1a2a4a);
+      border-bottom: 2px solid #00d4ff;
+      padding: 20px 40px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    header .logo {
+      font-size: 28px;
+      font-weight: bold;
+      color: #00d4ff;
+      letter-spacing: 3px;
+    }
+    header .subtitle {
+      font-size: 12px;
+      color: #7a9ab0;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .badge {
+      margin-left: auto;
+      background: rgba(0, 212, 255, 0.1);
+      border: 1px solid #00d4ff;
+      color: #00d4ff;
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      letter-spacing: 1px;
+    }
+
+    /* MAIN */
+    main {
+      max-width: 1100px;
+      margin: 40px auto;
+      padding: 0 24px;
+    }
+
+    /* SCAN CARD */
+    .scan-card {
+      background: #0f1929;
+      border: 1px solid #1e3a5f;
+      border-radius: 12px;
+      padding: 32px;
+      margin-bottom: 32px;
+    }
+    .scan-card h2 {
+      color: #00d4ff;
+      font-size: 16px;
+      letter-spacing: 2px;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .input-row input {
+      flex: 1;
+      min-width: 260px;
+      background: #070d18;
+      border: 1px solid #1e3a5f;
+      border-radius: 8px;
+      color: #00d4ff;
+      font-family: 'Courier New', monospace;
+      font-size: 15px;
+      padding: 12px 18px;
+      outline: none;
+      transition: border 0.2s;
+    }
+    .input-row input:focus { border-color: #00d4ff; }
+    .input-row input::placeholder { color: #3a5a7a; }
+
+    .scan-type {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .scan-type label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      color: #7a9ab0;
+      font-size: 13px;
+    }
+    .scan-type input[type=radio] { accent-color: #00d4ff; }
+    .scan-type label:has(input:checked) { color: #00d4ff; }
+
+    .btn-scan {
+      background: linear-gradient(135deg, #0066cc, #00aaff);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      padding: 12px 32px;
+      text-transform: uppercase;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn-scan:hover { opacity: 0.85; transform: translateY(-1px); }
+    .btn-scan:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* LOADER */
+    #loader {
+      display: none;
+      text-align: center;
+      padding: 40px;
+    }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 3px solid #1e3a5f;
+      border-top: 3px solid #00d4ff;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader-text { color: #7a9ab0; font-size: 13px; letter-spacing: 2px; }
+
+    /* RESULTS */
+    #results { display: none; }
+
+    /* SUMMARY CARDS */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .summary-card {
+      background: #0f1929;
+      border: 1px solid #1e3a5f;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+    }
+    .summary-card .value {
+      font-size: 32px;
+      font-weight: bold;
+      color: #00d4ff;
+    }
+    .summary-card .label {
+      font-size: 11px;
+      color: #7a9ab0;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+    .summary-card.open .value { color: #ff4d6d; }
+    .summary-card.os-card .value { font-size: 15px; color: #00ffaa; }
+
+    /* OS INFO */
+    .os-section {
+      background: #0f1929;
+      border: 1px solid #1e3a5f;
+      border-left: 4px solid #00ffaa;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+    }
+    .os-section h3 { color: #00ffaa; font-size: 13px; letter-spacing: 2px; margin-bottom: 10px; }
+    .os-item { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 14px; }
+    .os-accuracy { color: #7a9ab0; font-size: 12px; }
+
+    /* PORT TABLE */
+    .section-title {
+      color: #00d4ff;
+      font-size: 13px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .port-card {
+      background: #0f1929;
+      border: 1px solid #1e3a5f;
+      border-radius: 10px;
+      margin-bottom: 16px;
+      overflow: hidden;
+      transition: border 0.2s;
+    }
+    .port-card:hover { border-color: #00d4ff; }
+
+    .port-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 20px;
+      cursor: pointer;
+      background: #0a1422;
+    }
+    .port-number {
+      font-size: 18px;
+      font-weight: bold;
+      color: #00d4ff;
+      min-width: 70px;
+    }
+    .port-service {
+      font-size: 14px;
+      color: #e0e6f0;
+      flex: 1;
+    }
+    .port-version {
+      font-size: 12px;
+      color: #7a9ab0;
+      flex: 2;
+    }
+
+    .state-badge {
+      padding: 3px 12px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .state-open { background: rgba(255,77,109,0.15); color: #ff4d6d; border: 1px solid #ff4d6d; }
+    .state-closed { background: rgba(122,154,176,0.1); color: #7a9ab0; border: 1px solid #3a5a7a; }
+    .state-filtered { background: rgba(255,165,0,0.1); color: #ffa500; border: 1px solid #ffa500; }
+
+    .cve-badge {
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      background: rgba(255, 77, 109, 0.2);
+      color: #ff4d6d;
+      border: 1px solid #ff4d6d;
+    }
+    .no-cve-badge {
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      background: rgba(0, 255, 170, 0.1);
+      color: #00ffaa;
+      border: 1px solid #00ffaa;
+    }
+
+    /* CVE DETAILS */
+    .port-details {
+      display: none;
+      padding: 16px 20px;
+      border-top: 1px solid #1e3a5f;
+    }
+    .port-details.show { display: block; }
+    .cve-title { color: #7a9ab0; font-size: 12px; letter-spacing: 1px; margin-bottom: 10px; }
+
+    .cve-item {
+      background: #070d18;
+      border: 1px solid #1e3a5f;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 10px;
+    }
+    .cve-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .cve-id { color: #00d4ff; font-weight: bold; font-size: 13px; }
+    .cve-score { padding: 2px 10px; border-radius: 10px; font-size: 12px; font-weight: bold; }
+    .sev-CRITICAL { background: rgba(220,0,0,0.2); color: #ff3333; border: 1px solid #ff3333; }
+    .sev-HIGH     { background: rgba(255,77,109,0.2); color: #ff4d6d; border: 1px solid #ff4d6d; }
+    .sev-MEDIUM   { background: rgba(255,165,0,0.2); color: #ffa500; border: 1px solid #ffa500; }
+    .sev-LOW      { background: rgba(0,255,170,0.15); color: #00ffaa; border: 1px solid #00ffaa; }
+    .sev-UNKNOWN  { background: rgba(122,154,176,0.1); color: #7a9ab0; border: 1px solid #3a5a7a; }
+    .cve-desc { font-size: 13px; color: #9ab0c8; line-height: 1.5; }
+
+    /* ERROR */
+    .error-box {
+      background: rgba(255,77,109,0.1);
+      border: 1px solid #ff4d6d;
+      border-radius: 8px;
+      color: #ff4d6d;
+      padding: 16px 20px;
+      font-size: 14px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 30px;
+      color: #3a5a7a;
+      font-size: 12px;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">&#x1F6E1; VULNSCAN</div>
+    <div class="subtitle">Network Vulnerability Scanner</div>
+  </div>
+  <div class="badge">&#x25CF; ACTIVE</div>
+</header>
+
+<main>
+  <div class="scan-card">
+    <h2>&#x1F4E1; Scan Target</h2>
+    <div class="input-row">
+      <input type="text" id="targetInput" placeholder="Enter IP or hostname (e.g. 192.168.1.1 or scanme.nmap.org)" />
+      <button class="btn-scan" id="scanBtn" onclick="startScan()">&#x25B6; Scan</button>
+    </div>
+    <div class="scan-type">
+      <label><input type="radio" name="scan_type" value="quick" checked> ⚡ Quick Scan (Top 100 ports)</label>
+      <label><input type="radio" name="scan_type" value="standard"> 🔍 Deep Scan (OS + CVE lookup)</label>
+    </div>
+  </div>
+
+  <div id="loader">
+    <div class="spinner"></div>
+    <div class="loader-text" id="loaderText">INITIALIZING SCAN...</div>
+  </div>
+
+  <div id="results"></div>
+</main>
+
+<footer>Built by B Pavan &nbsp;|&nbsp; Powered by Nmap + NIST NVD API</footer>
+
+<script>
+  const loaderMessages = [
+    "INITIALIZING SCAN...",
+    "PROBING OPEN PORTS...",
+    "DETECTING SERVICES...",
+    "FINGERPRINTING OS...",
+    "QUERYING CVE DATABASE...",
+    "ANALYZING RESULTS..."
+  ];
+  let loaderInterval;
+
+  function startScan() {
+    const target = document.getElementById("targetInput").value.trim();
+    if (!target) { alert("Please enter a target!"); return; }
+
+    const scanType = document.querySelector('input[name="scan_type"]:checked').value;
+
+    document.getElementById("scanBtn").disabled = true;
+    document.getElementById("results").style.display = "none";
+    document.getElementById("loader").style.display = "block";
+
+    let i = 0;
+    loaderInterval = setInterval(() => {
+      document.getElementById("loaderText").textContent = loaderMessages[i % loaderMessages.length];
+      i++;
+    }, 2500);
+
+    fetch("/scan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target, scan_type: scanType })
+    })
+    .then(r => r.json())
+    .then(data => {
+      clearInterval(loaderInterval);
+      document.getElementById("loader").style.display = "none";
+      document.getElementById("scanBtn").disabled = false;
+      renderResults(data);
+    })
+    .catch(err => {
+      clearInterval(loaderInterval);
+      document.getElementById("loader").style.display = "none";
+      document.getElementById("scanBtn").disabled = false;
+      document.getElementById("results").style.display = "block";
+      document.getElementById("results").innerHTML = `<div class="error-box">⚠️ Error: ${err.message}</div>`;
+    });
+  }
+
+  function severityClass(sev) {
+    const s = (sev || "UNKNOWN").toUpperCase();
+    return "sev-" + (["CRITICAL","HIGH","MEDIUM","LOW"].includes(s) ? s : "UNKNOWN");
+  }
+
+  function renderResults(data) {
+    const el = document.getElementById("results");
+    el.style.display = "block";
+
+    if (data.error) {
+      el.innerHTML = `<div class="error-box">⚠️ ${data.error}</div>`;
+      return;
+    }
+
+    const s = data.summary || {};
+    const os = data.os || [];
+    const ports = data.ports || [];
+    const openPorts = ports.filter(p => p.state === "open");
+    const totalCVEs = openPorts.reduce((acc, p) => acc + (p.cves || []).length, 0);
+
+    let osHtml = "";
+    if (os.length) {
+      osHtml = `<div class="os-section">
+        <h3>🖥️ OS FINGERPRINT</h3>
+        ${os.map(o => `<div class="os-item"><span>${o.name}</span><span class="os-accuracy">${o.accuracy}% accuracy</span></div>`).join("")}
+      </div>`;
+    }
+
+    let portsHtml = openPorts.length === 0
+      ? `<div class="error-box">No open ports found on this target.</div>`
+      : openPorts.map((p, i) => {
+        const cves = p.cves || [];
+        const cveBadge = cves.length
+          ? `<span class="cve-badge">⚠️ ${cves.length} CVE${cves.length > 1 ? "s" : ""}</span>`
+          : `<span class="no-cve-badge">✓ No CVEs</span>`;
+
+        const cveItems = cves.map(c => `
+          <div class="cve-item">
+            <div class="cve-row">
+              <span class="cve-id">${c.id}</span>
+              <span class="cve-score ${severityClass(c.severity)}">${c.severity} ${c.score !== "N/A" ? "| " + c.score : ""}</span>
+            </div>
+            <div class="cve-desc">${c.description}</div>
+          </div>`).join("");
+
+        return `<div class="port-card">
+          <div class="port-header" onclick="toggleDetails(${i})">
+            <span class="port-number">${p.port}/${p.protocol}</span>
+            <span class="port-service">${p.service || "unknown"}</span>
+            <span class="port-version">${p.version || ""}</span>
+            <span class="state-badge state-${p.state}">${p.state}</span>
+            ${cveBadge}
+          </div>
+          <div class="port-details" id="details-${i}">
+            ${cves.length ? `<div class="cve-title">⚠️ VULNERABILITIES FOUND</div>${cveItems}` : `<div class="cve-title" style="color:#00ffaa">✓ No known CVEs found for this service.</div>`}
+          </div>
+        </div>`;
+      }).join("");
+
+    el.innerHTML = `
+      <div class="summary-grid">
+        <div class="summary-card"><div class="value">${data.target}</div><div class="label">Target</div></div>
+        <div class="summary-card"><div class="value" style="color:#00ffaa">${data.status}</div><div class="label">Host Status</div></div>
+        <div class="summary-card open"><div class="value">${s.open_ports || 0}</div><div class="label">Open Ports</div></div>
+        <div class="summary-card"><div class="value">${s.total_ports || 0}</div><div class="label">Total Scanned</div></div>
+        <div class="summary-card open"><div class="value">${totalCVEs}</div><div class="label">CVEs Found</div></div>
+      </div>
+      ${osHtml}
+      <div class="section-title">🔓 Open Ports & Vulnerabilities</div>
+      ${portsHtml}
+    `;
+  }
+
+  function toggleDetails(i) {
+    const el = document.getElementById("details-" + i);
+    el.classList.toggle("show");
+  }
+
+  document.getElementById("targetInput").addEventListener("keypress", e => {
+    if (e.key === "Enter") startScan();
+  });
+</script>
+</body>
+</html>
